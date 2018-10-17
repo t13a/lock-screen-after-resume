@@ -1,0 +1,109 @@
+#!/bin/bash
+
+set -euo pipefail
+
+function check_and_lock() {
+    local -i t1=0
+    local -i t2=0
+    local -i td
+
+    while read t1
+    do
+        td=$((${t1} - ${t2} - ${INTERVAL}))
+
+        if [ ${t1} -eq 0 -o ${t2} -eq 0 ]
+        then
+            verbose "preparing..."
+        elif [ ${td} -ge ${THRESHOLD} ]
+        then
+            verbose "time-delta(${td}) is greater than or equals threshold(${THRESHOLD})"
+            lock
+        else
+            verbose "time-delta(${td}) is lesser than threshold(${THRESHOLD})"
+        fi
+
+        t2=${t1}
+    done
+}
+
+function help() {
+    cat << EOF
+${0} [OPTION]...
+
+Options:
+  -c COMMAND      set command (default: '${COMMAND_DEFAULT}')
+  -i INTERVAL     set interval seconds (default: ${INTERVAL_DEFAULT})
+  -n              dry run
+  -t THRESHOLD    set threshold seconds (default: ${THRESHOLD_DEFAULT})
+  -v              verbose
+EOF
+}
+
+function lock() {
+    verbose "lock: ${COMMAND}"
+    run_or_dry_run ${COMMAND} || return 0 # ignore error
+}
+
+function run_or_dry_run() {
+    if [ -z "${DRY_RUN}" ]
+    then
+        "${@}"
+    else
+        echo "dry run: ${@}" >&2
+    fi
+}
+
+function tick() {
+    while true
+    do
+        echo $(date +%s)
+        sleep "${INTERVAL}"
+    done
+}
+
+function verbose() {
+    [ -n "${VERBOSE}" ] && echo "${@}" >&2 || return 0
+}
+
+declare -r COMMAND_DEFAULT="xdg-screensaver lock"
+declare -r INTERVAL_DEFAULT=5
+declare -r THRESHOLD_DEFAULT=5
+
+declare COMMAND="${COMMAND_DEFAULT}"
+declare DRY_RUN=
+declare -i INTERVAL=${INTERVAL_DEFAULT}
+declare -i THRESHOLD=${THRESHOLD_DEFAULT}
+declare VERBOSE=
+
+while getopts 'c:hi:nt:v' OPT
+do
+    case "${OPT}" in
+        c)
+            COMMAND="${OPTARG}"
+            ;;
+        h)
+            help
+            exit 1
+            ;;
+        i)
+            INTERVAL="${OPTARG}"
+            ;;
+        n)
+            DRY_RUN=yes
+            ;;
+        t)
+            THRESHOLD="${OPTARG}"
+            ;;
+        v)
+            VERBOSE=yes
+            ;;
+        *)
+            help
+            exit 1
+            ;;
+    esac
+done
+
+shift $((${OPTIND} - 1))
+
+tick | check_and_lock
