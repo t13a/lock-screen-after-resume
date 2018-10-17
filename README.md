@@ -14,7 +14,7 @@ This script considers a long CPU stop as resume.  When the resume is detected, t
 
 ## Installation
 
-`~/.config/autostart`:
+`~/.config/autostart/lock-screen-after-resume.desktop`:
 
 ```
 [Desktop Entry]
