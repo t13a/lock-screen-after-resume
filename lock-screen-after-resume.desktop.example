@@ -1,5 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Lock Screen After Resume
-Exec=/usr/local/bin/lock-screen-after-resume
-X-GNOME-Autostart-enabled=true
