@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-function check_and_lock() {
+function check() {
     local -i t1=0
     local -i t2=0
     local -i td
@@ -17,6 +17,7 @@ function check_and_lock() {
         elif [ ${td} -ge ${THRESHOLD} ]
         then
             verbose "time-delta(${td}) is greater than or equals threshold(${THRESHOLD})"
+            delay
             lock
         else
             verbose "time-delta(${td}) is lesser than threshold(${THRESHOLD})"
@@ -26,12 +27,21 @@ function check_and_lock() {
     done
 }
 
+function delay() {
+    if [ ${DELAY} -gt 0 ]
+    then
+        verbose "wait for ${DELAY} seconds..."
+        sleep "${DELAY}"
+    fi
+}
+
 function help() {
     cat << EOF
 ${0} [OPTION]...
 
 Options:
   -c COMMAND      set command (default: '${COMMAND_DEFAULT}')
+  -d DELAY        set delay seconds (default: ${DELAY_DEFAULT})
   -i INTERVAL     set interval seconds (default: ${INTERVAL_DEFAULT})
   -n              dry run
   -t THRESHOLD    set threshold seconds (default: ${THRESHOLD_DEFAULT})
@@ -66,20 +76,25 @@ function verbose() {
 }
 
 declare -r COMMAND_DEFAULT="xdg-screensaver lock"
-declare -r INTERVAL_DEFAULT=5
+declare -r DELAY_DEFAULT=2
+declare -r INTERVAL_DEFAULT=3
 declare -r THRESHOLD_DEFAULT=5
 
 declare COMMAND="${COMMAND_DEFAULT}"
+declare -i DELAY=${DELAY_DEFAULT}
 declare DRY_RUN=
 declare -i INTERVAL=${INTERVAL_DEFAULT}
 declare -i THRESHOLD=${THRESHOLD_DEFAULT}
 declare VERBOSE=
 
-while getopts 'c:hi:nt:v' OPT
+while getopts 'c:d:hi:nt:v' OPT
 do
     case "${OPT}" in
         c)
             COMMAND="${OPTARG}"
+            ;;
+        d)
+            DELAY="${OPTARG}"
             ;;
         h)
             help
@@ -106,4 +121,4 @@ done
 
 shift $((${OPTIND} - 1))
 
-tick | check_and_lock
+tick | check
